@@ -7,11 +7,11 @@ import { SequelizeModule } from '@nestjs/sequelize';
 import { PassportModule } from '@nestjs/passport';
 import { User } from './entities/auth.entity';
 import { JwtStrategy } from './jwt.strategy';
-
+import {RefreshToken}from './entities/refreshToken.entity'
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }), // Load .env globally
-    SequelizeModule.forFeature([User]),
+    SequelizeModule.forFeature([User,RefreshToken]),
     PassportModule, // Needed for AuthGuard('jwt')
     JwtModule.registerAsync({
       imports: [ConfigModule],

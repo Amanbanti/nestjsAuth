@@ -1,15 +1,18 @@
-import { Injectable, ConflictException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, ConflictException, UnauthorizedException, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { User } from './entities/auth.entity';
 import * as bcrypt from 'bcrypt';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
+import { RefreshToken } from './entities/refreshToken.entity';
+import { Op } from 'sequelize';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectModel(User) private userModel: typeof User,
+    @InjectModel(RefreshToken) private refreshTokenModel: typeof RefreshToken,
     private jwtService: JwtService
   ) {}
 
@@ -23,9 +26,8 @@ export class AuthService {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new this.userModel({ name, email, password: hashedPassword });
+    const newUser = await this.userModel.create({ name, email, password: hashedPassword });
 
-    await newUser.save();
     return newUser;
   }
 
@@ -38,10 +40,48 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const payload = { email: user.email, sub: user.id };
-
-    return {
-      access_token: this.jwtService.sign(payload), // Generate JWT
-    };
+    return this.generateTokens(user);
   }
+
+  // Generate Access & Refresh Tokens
+  async generateTokens(user: User) {
+          const payload = { userId: user.id, email: user.email };
+
+          const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
+          const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
+
+        // Store refresh token in DB
+        await this.refreshTokenModel.create({
+          token: refreshToken,
+          userId: Number(user.id),
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days expiry
+          revoked: false,
+      } as RefreshToken);
+    
+
+
+    return { access_token: accessToken, refresh_token: refreshToken };
+  }
+
+  // Refresh Token API
+  async refreshAccessToken(refreshToken: string) {
+        const storedToken = await this.refreshTokenModel.findOne({
+          where: {
+            token: refreshToken,
+            revoked: false,
+            expiresAt: { [Op.gt]: new Date() },
+          },
+        });
+
+        if (!storedToken) {
+          throw new UnauthorizedException('Invalid or expired refresh token, Login again!');
+        }
+
+        const payload = this.jwtService.verify(refreshToken);
+        const newAccessToken = this.jwtService.sign({ userId: payload.userId, email: payload.email }, { expiresIn: '1h' });
+
+        return { access_token: newAccessToken };
+  }
+
+  
 }
