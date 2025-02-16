@@ -1,36 +1,47 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import { Injectable, ConflictException, UnauthorizedException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { User } from './entities/auth.entity';
 import * as bcrypt from 'bcrypt';
 import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
+import { LoginDto } from './dto/login.dto';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
-  constructor(@InjectModel(User) private userModel: typeof User) {}
+  constructor(
+    @InjectModel(User) private userModel: typeof User,
+    private jwtService: JwtService
+  ) {}
 
-
-
-  //register service
+  // Register API
   async register(registerData: CreateAuthDto): Promise<User> {
-
     const { name, email, password } = registerData;
-  
-    // Check if user already exists
+
     const existingUser = await this.userModel.findOne({ where: { email } });
     if (existingUser) {
       throw new ConflictException('Email is already in use!');
     }
-  
-    // Hash the password
+
     const hashedPassword = await bcrypt.hash(password, 10);
-  
-    //Create an instance of the model before saving
     const newUser = new this.userModel({ name, email, password: hashedPassword });
-  
-    await newUser.save(); 
-  
+
+    await newUser.save();
     return newUser;
   }
-  
+
+  // Login API
+  async login(loginDto: LoginDto) {
+    const { email, password } = loginDto;
+    const user = await this.userModel.findOne({ where: { email } });
+
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const payload = { email: user.email, sub: user.id };
+
+    return {
+      access_token: this.jwtService.sign(payload), // Generate JWT
+    };
+  }
 }
