@@ -1,7 +1,8 @@
 import { Table, Column, Model, DataType } from 'sequelize-typescript';
 
 @Table({ tableName: 'users' })
-export class User extends Model<User, Partial<User>> {  // ✅ Add Partial<User>
+//Partial<User> When updating a User, you might not provide all fields
+export class User extends Model<User, Partial<User>> {
   @Column({ type: DataType.STRING, allowNull: false })
   name: string;
 
