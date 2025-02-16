@@ -20,7 +20,7 @@ import {
   
     @IsString()
     @IsNotEmpty({ message: 'Password is required' })
-    @MinLength(8, { message: 'Password must be at least 8 characters long' })
+    @MinLength(6, { message: 'Password must be at least 6 characters long' })
     @MaxLength(20, { message: 'Password cannot be longer than 20 characters' })
     @Matches(/(?=.*[a-z])/, {
       message: 'Password must contain at least one lowercase letter',
