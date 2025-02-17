@@ -7,7 +7,7 @@ import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
 import { RefreshToken } from './entities/refreshToken.entity';
 import { Op } from 'sequelize';
-
+import { ChangePasswordDto } from './dto/change-password.dto';
 @Injectable()
 export class AuthService {
   constructor(
@@ -37,7 +37,7 @@ export class AuthService {
     const user = await this.userModel.findOne({ where: { email } });
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Invalid email or passowrd!');
     }
 
     return this.generateTokens(user);
@@ -45,8 +45,7 @@ export class AuthService {
 
   // Generate Access & Refresh Tokens
   async generateTokens(user: User) {
-          const payload = { userId: user.id, email: user.email };
-
+          const payload = { id : user.id, email: user.email };
           const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
           const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
 
@@ -82,6 +81,31 @@ export class AuthService {
 
         return { access_token: newAccessToken };
   }
-l
-  
+
+
+
+     // change password api end-point
+      async changePassword(userId: number, changePasswordDto: ChangePasswordDto) {
+        const { oldPassword, newPassword } = changePasswordDto;
+    
+        const user = await this.userModel.findByPk(userId);
+       
+        if (!user) {
+          throw new UnauthorizedException('User not found');
+        }
+
+        // Verify old password
+        const isMatch = await bcrypt.compare(oldPassword, user.password);
+        if (!isMatch) {
+          throw new UnauthorizedException('Old password is incorrect');
+        }
+
+        // Hash the new password
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        user.password = hashedPassword;
+        await user.save();
+
+        return { message: 'Password changed successfully' };
+      }
+      
 }
