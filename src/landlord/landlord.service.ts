@@ -20,7 +20,5 @@ export class LandlordService {
     return `This action updates a #${id} landlord`;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} landlord`;
-  }
+  
 }
