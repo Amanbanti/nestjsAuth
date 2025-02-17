@@ -9,6 +9,7 @@ import { User } from './entities/auth.entity';
 import { JwtStrategy } from './jwt.strategy';
 import {RefreshToken}from './entities/refreshToken.entity'
 import {JwtAuthGuard} from './guards/auth.guard'
+import { MailService } from '../mail/mail.service';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }), // Load .env globally
@@ -24,7 +25,7 @@ import {JwtAuthGuard} from './guards/auth.guard'
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy,JwtAuthGuard], // Register JwtStrategy here
+  providers: [AuthService, JwtStrategy,JwtAuthGuard,MailService],
   exports: [AuthService, JwtModule,JwtAuthGuard], // Export JWT for other modules
 })
 export class AuthModule {}
