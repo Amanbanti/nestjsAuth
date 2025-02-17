@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { User } from './auth/entities/auth.entity';
+import { LandlordModule } from './landlord/landlord.module';
 import config from './config/config';
 
 @Module({
@@ -30,6 +31,8 @@ import config from './config/config';
     }),
 
     AuthModule,
+
+    LandlordModule,
   ],
   controllers: [AppController],
   providers: [AppService],
