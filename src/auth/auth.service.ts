@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, UnauthorizedException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, UnauthorizedException,BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { User } from './entities/auth.entity';
 import * as bcrypt from 'bcrypt';
@@ -8,10 +8,13 @@ import { JwtService } from '@nestjs/jwt';
 import { RefreshToken } from './entities/refreshToken.entity';
 import { Op } from 'sequelize';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { ForgotPasswordDto,ResetPasswordDto } from './dto/forgot-password.dto';
+import { MailService } from '../mail/mail.service';
 @Injectable()
 export class AuthService {
   constructor(
     @InjectModel(User) private userModel: typeof User,
+    private mailService: MailService,
     @InjectModel(RefreshToken) private refreshTokenModel: typeof RefreshToken,
     private jwtService: JwtService
   ) {}
@@ -106,6 +109,43 @@ export class AuthService {
         await user.save();
 
         return { message: 'Password changed successfully' };
+      }
+
+
+
+      // Generate Reset Token & Send Email
+      async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
+        const { email } = forgotPasswordDto;
+        const user = await this.userModel.findOne({ where: { email } });
+    
+        if (!user) throw new NotFoundException('User not found');
+    
+        const resetToken = this.jwtService.sign({ id: user.id }, { expiresIn: '1h' });
+    
+        // Send Email with Reset Link
+        await this.mailService.sendResetPasswordEmail(email, resetToken);
+    
+        return { message: 'Password reset link has been sent to your email' };
+      }
+
+      //Step 2: Verify Token & Reset Password
+      async resetPassword(resetPasswordDto: ResetPasswordDto) {
+        const { token, newPassword } = resetPasswordDto;
+
+        try {
+          const decoded = this.jwtService.verify(token);
+          const user = await this.userModel.findByPk(decoded.id);
+
+          if (!user) throw new NotFoundException('User not found');
+
+          //Hash new password
+          const hashedPassword = await bcrypt.hash(newPassword, 10);
+          await user.update({ password: hashedPassword });
+
+          return { message: 'Password reset successfully' };
+        } catch (error) {
+          throw new BadRequestException('Invalid or expired reset token');
+        }
       }
       
 }
