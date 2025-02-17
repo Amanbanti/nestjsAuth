@@ -8,6 +8,7 @@ import { PassportModule } from '@nestjs/passport';
 import { User } from './entities/auth.entity';
 import { JwtStrategy } from './jwt.strategy';
 import {RefreshToken}from './entities/refreshToken.entity'
+import {JwtAuthGuard} from './guards/auth.guard'
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }), // Load .env globally
@@ -23,7 +24,7 @@ import {RefreshToken}from './entities/refreshToken.entity'
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy], // Register JwtStrategy here
-  exports: [AuthService, JwtModule], // Export JWT for other modules
+  providers: [AuthService, JwtStrategy,JwtAuthGuard], // Register JwtStrategy here
+  exports: [AuthService, JwtModule,JwtAuthGuard], // Export JWT for other modules
 })
 export class AuthModule {}
